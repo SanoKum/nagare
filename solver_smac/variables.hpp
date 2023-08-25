@@ -24,10 +24,10 @@ public:
         "divU*vol" , "divU" , "divU_star",
         "convx" , "convy" , "convz" , "convT",
         "diffx" , "diffy" , "diffz" , "diffT",
-        "src"  , "res", 
+//        "src" // , "res", 
         "dP", 
         "dPPdx", "dPPdy", "dPPdz",
-        "volume" , "svsum_x", "svsum_y", "svsum_z",
+//        "volume" , "svsum_x", "svsum_y", "svsum_z",
         "cfl"
     };
 

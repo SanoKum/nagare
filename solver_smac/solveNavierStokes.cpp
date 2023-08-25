@@ -9,8 +9,8 @@ void solveNavierStokes(solverConfig &cfg , mesh &msh , variables &v , matrix& ma
     vector<geom_float> sv(3);
     vector<geom_float> nv(3); // normal
 
-    vector<geom_float> nv_dia(3); // diagonal
-    vector<geom_float> nv_nodia(3); // non-diagonal
+    vector<geom_float> sv_dia(3); // diagonal
+    vector<geom_float> sv_nodia(3); // non-diagonal
 
     vector<geom_float> pcent(3);
     vector<geom_float> c0cent(3);
@@ -33,9 +33,10 @@ void solveNavierStokes(solverConfig &cfg , mesh &msh , variables &v , matrix& ma
     vector<geom_float> dc1pv(3);
     geom_float dc1p;
 
-    geom_float dccv_dot_nv;
+    geom_float dccv_dot_sv;
 
-    geom_float f;
+    vector<geom_float> deltav(3);
+    geom_float delta;
 
     geom_float temp_ndia;
     geom_float temp_ndia_x;
@@ -97,6 +98,7 @@ void solveNavierStokes(solverConfig &cfg , mesh &msh , variables &v , matrix& ma
     vector<flow_float>& USp = v.p["US"];
     vector<flow_float>& Pp  = v.p["P"];
 
+    vector<flow_float>& fxp  = v.p["fx"];
 
 
     // normal plane
@@ -107,9 +109,9 @@ void solveNavierStokes(solverConfig &cfg , mesh &msh , variables &v , matrix& ma
         sv      = msh.planes[ip].surfVect;
         ss      = msh.planes[ip].surfArea;
 
-        nv[0]   = sv[0]/ss;
-        nv[1]   = sv[1]/ss;
-        nv[2]   = sv[2]/ss;
+        //nv[0]   = sv[0]/ss;
+        //nv[1]   = sv[1]/ss;
+        //nv[2]   = sv[2]/ss;
 
         pcent   = msh.planes[ip].centCoords;
 
@@ -121,30 +123,35 @@ void solveNavierStokes(solverConfig &cfg , mesh &msh , variables &v , matrix& ma
         dccv[2] = c1cent[2] - c0cent[2];
         dcc     = sqrt( pow(dccv[0], 2.0) + pow(dccv[1], 2.0) + pow(dccv[2], 2.0));
 
-        dc0pv[0] = pcent[0] - c0cent[0];
-        dc0pv[1] = pcent[1] - c0cent[1];
-        dc0pv[2] = pcent[2] - c0cent[2];
-        dc0p    = sqrt( pow(dc0pv[0], 2.0) + pow(dc0pv[1], 2.0) + pow(dc0pv[2], 2.0));
+        dccv_dot_sv = dccv[0]*sv[0] + dccv[1]*sv[1] + dccv[2]*sv[2];
 
-        dc1pv[0] = pcent[0] - c1cent[0];
-        dc1pv[1] = pcent[1] - c1cent[1];
-        dc1pv[2] = pcent[2] - c1cent[2];
-        dc1p    = sqrt( pow(dc1pv[0], 2.0) + pow(dc1pv[1], 2.0) + pow(dc1pv[2], 2.0));
+        deltav[0] = dccv[0]*pow(ss, 2.0)/dccv_dot_sv;
+        deltav[1] = dccv[1]*pow(ss, 2.0)/dccv_dot_sv;
+        deltav[2] = dccv[2]*pow(ss, 2.0)/dccv_dot_sv;
+        delta = dcc*pow(ss, 2.0)/dccv_dot_sv;
 
-        dccv_dot_nv = dccv[0]*nv[0] + dccv[1]*nv[1] + dccv[2]*nv[2];
-        cosT = dccv_dot_nv/dcc;
+        sv_nodia[0] = sv[0] - deltav[0];
+        sv_nodia[1] = sv[1] - deltav[1];
+        sv_nodia[2] = sv[2] - deltav[2];
 
-        nv_nodia[0] = nv[0] - dccv[0]/dccv_dot_nv;
-        nv_nodia[1] = nv[1] - dccv[1]/dccv_dot_nv;
-        nv_nodia[2] = nv[2] - dccv[2]/dccv_dot_nv;
 
-        f = dc1p/dcc;
+        //dc0pv[0] = pcent[0] - c0cent[0];
+        //dc0pv[1] = pcent[1] - c0cent[1];
+        //dc0pv[2] = pcent[2] - c0cent[2];
+        //dc0p    = sqrt( pow(dc0pv[0], 2.0) + pow(dc0pv[1], 2.0) + pow(dc0pv[2], 2.0));
+
+        //dc1pv[0] = pcent[0] - c1cent[0];
+        //dc1pv[1] = pcent[1] - c1cent[1];
+        //dc1pv[2] = pcent[2] - c1cent[2];
+        //dc1p    = sqrt( pow(dc1pv[0], 2.0) + pow(dc1pv[1], 2.0) + pow(dc1pv[2], 2.0));
+
+        //f = dc1p/dcc;
 
         // conve u
-        rof = f*ro[ic0] +(1.0-f)*ro[ic1];
-        US = (f*Ux[ic0] +(1.0-f)*Ux[ic1])*sv[0]
-            +(f*Uy[ic0] +(1.0-f)*Uy[ic1])*sv[1]
-            +(f*Uz[ic0] +(1.0-f)*Uz[ic1])*sv[2];
+        rof = fxp[ip]*ro[ic0] +(1.0-fxp[ip])*ro[ic1];
+        US = (fxp[ip]*Ux[ic0] +(1.0-fxp[ip])*Ux[ic1])*sv[0]
+            +(fxp[ip]*Uy[ic0] +(1.0-fxp[ip])*Uy[ic1])*sv[1]
+            +(fxp[ip]*Uz[ic0] +(1.0-fxp[ip])*Uz[ic1])*sv[2];
         //mass = rof*US;
 
         convx[ic0] += 0.5*rof*( (US+abs(US))*Ux[ic0] + (US-abs(US))*Ux[ic1] );
@@ -155,26 +162,26 @@ void solveNavierStokes(solverConfig &cfg , mesh &msh , variables &v , matrix& ma
         convy[ic1] -= 0.5*rof*( (US+abs(US))*Uy[ic0] + (US-abs(US))*Uy[ic1] );
         convz[ic1] -= 0.5*rof*( (US+abs(US))*Uz[ic0] + (US-abs(US))*Uz[ic1] );
 
-        temp_ndia_x = +(   (f*dUxdx[ic0]+(1.0-f)*dUxdx[ic1]) *nv_nodia[0]   // non-diagonal term 
-                         + (f*dUxdy[ic0]+(1.0-f)*dUxdy[ic1]) *nv_nodia[1] 
-                         + (f*dUxdz[ic0]+(1.0-f)*dUxdz[ic1]) *nv_nodia[2] )*ss ;
+        temp_ndia_x = (fxp[ip]*dUxdx[ic0]+(1.0-fxp[ip])*dUxdx[ic1]) *sv_nodia[0]   // non-diagonal term 
+                    + (fxp[ip]*dUxdy[ic0]+(1.0-fxp[ip])*dUxdy[ic1]) *sv_nodia[1] 
+                    + (fxp[ip]*dUxdz[ic0]+(1.0-fxp[ip])*dUxdz[ic1]) *sv_nodia[2] ;
 
-        temp_ndia_y = +(   (f*dUydx[ic0]+(1.0-f)*dUydx[ic1]) *nv_nodia[0]   // non-diagonal term 
-                         + (f*dUydy[ic0]+(1.0-f)*dUydy[ic1]) *nv_nodia[1] 
-                         + (f*dUydz[ic0]+(1.0-f)*dUydz[ic1]) *nv_nodia[2] )*ss ;
+        temp_ndia_y = (fxp[ip]*dUydx[ic0]+(1.0-fxp[ip])*dUydx[ic1]) *sv_nodia[0]   // non-diagonal term 
+                    + (fxp[ip]*dUydy[ic0]+(1.0-fxp[ip])*dUydy[ic1]) *sv_nodia[1] 
+                    + (fxp[ip]*dUydz[ic0]+(1.0-fxp[ip])*dUydz[ic1]) *sv_nodia[2] ;
 
-        temp_ndia_z = +(   (f*dUzdx[ic0]+(1.0-f)*dUzdx[ic1]) *nv_nodia[0]   // non-diagonal term 
-                         + (f*dUzdy[ic0]+(1.0-f)*dUzdy[ic1]) *nv_nodia[1] 
-                         + (f*dUzdz[ic0]+(1.0-f)*dUzdz[ic1]) *nv_nodia[2] )*ss ;
+        temp_ndia_z =  (fxp[ip]*dUzdx[ic0]+(1.0-fxp[ip])*dUzdx[ic1]) *sv_nodia[0]   // non-diagonal term 
+                     + (fxp[ip]*dUzdy[ic0]+(1.0-fxp[ip])*dUzdy[ic1]) *sv_nodia[1] 
+                     + (fxp[ip]*dUzdz[ic0]+(1.0-fxp[ip])*dUzdz[ic1]) *sv_nodia[2] ;
 
 
-        diffx[ic0] +=  cfg.visc*( (Ux[ic1] - Ux[ic0])/dcc*ss/cosT + temp_ndia_x);
-        diffy[ic0] +=  cfg.visc*( (Uy[ic1] - Uy[ic0])/dcc*ss/cosT + temp_ndia_y);
-        diffz[ic0] +=  cfg.visc*( (Uz[ic1] - Uz[ic0])/dcc*ss/cosT + temp_ndia_z);
+        diffx[ic0] +=  cfg.visc*( (Ux[ic1] - Ux[ic0])/dcc*delta + temp_ndia_x);
+        diffy[ic0] +=  cfg.visc*( (Uy[ic1] - Uy[ic0])/dcc*delta + temp_ndia_y);
+        diffz[ic0] +=  cfg.visc*( (Uz[ic1] - Uz[ic0])/dcc*delta + temp_ndia_z);
 
-        diffx[ic1] -=  cfg.visc*( (Ux[ic1] - Ux[ic0])/dcc*ss/cosT + temp_ndia_x);
-        diffy[ic1] -=  cfg.visc*( (Uy[ic1] - Uy[ic0])/dcc*ss/cosT + temp_ndia_y);
-        diffz[ic1] -=  cfg.visc*( (Uz[ic1] - Uz[ic0])/dcc*ss/cosT + temp_ndia_z);
+        diffx[ic1] -=  cfg.visc*( (Ux[ic1] - Ux[ic0])/dcc*delta + temp_ndia_x);
+        diffy[ic1] -=  cfg.visc*( (Uy[ic1] - Uy[ic0])/dcc*delta + temp_ndia_y);
+        diffz[ic1] -=  cfg.visc*( (Uz[ic1] - Uz[ic0])/dcc*delta + temp_ndia_z);
     }
 
     // boundary conditions
@@ -237,10 +244,6 @@ void solveNavierStokes(solverConfig &cfg , mesh &msh , variables &v , matrix& ma
         vol0 = msh.cells[ic0].volume;
         vol1 = msh.cells[ic1].volume;
 
-        nv[0]   = sv[0]/ss;
-        nv[1]   = sv[1]/ss;
-        nv[2]   = sv[2]/ss;
-
         pcent   = msh.planes[ip].centCoords;
 
         c0cent  = msh.cells[ic0].centCoords;
@@ -251,42 +254,42 @@ void solveNavierStokes(solverConfig &cfg , mesh &msh , variables &v , matrix& ma
         dccv[2] = c1cent[2] - c0cent[2];
         dcc     = sqrt( pow(dccv[0], 2.0) + pow(dccv[1], 2.0) + pow(dccv[2], 2.0));
 
-        dc0pv[0] = pcent[0] - c0cent[0];
-        dc0pv[1] = pcent[1] - c0cent[1];
-        dc0pv[2] = pcent[2] - c0cent[2];
-        dc0p    = sqrt( pow(dc0pv[0], 2.0) + pow(dc0pv[1], 2.0) + pow(dc0pv[2], 2.0));
+        //dc0pv[0] = pcent[0] - c0cent[0];
+        //dc0pv[1] = pcent[1] - c0cent[1];
+        //dc0pv[2] = pcent[2] - c0cent[2];
+        //dc0p    = sqrt( pow(dc0pv[0], 2.0) + pow(dc0pv[1], 2.0) + pow(dc0pv[2], 2.0));
 
-        dc1pv[0] = pcent[0] - c1cent[0];
-        dc1pv[1] = pcent[1] - c1cent[1];
-        dc1pv[2] = pcent[2] - c1cent[2];
-        dc1p    = sqrt( pow(dc1pv[0], 2.0) + pow(dc1pv[1], 2.0) + pow(dc1pv[2], 2.0));
+        //dc1pv[0] = pcent[0] - c1cent[0];
+        //dc1pv[1] = pcent[1] - c1cent[1];
+        //dc1pv[2] = pcent[2] - c1cent[2];
+        //dc1p    = sqrt( pow(dc1pv[0], 2.0) + pow(dc1pv[1], 2.0) + pow(dc1pv[2], 2.0));
 
-        dccv_dot_nv = dccv[0]*nv[0] + dccv[1]*nv[1] + dccv[2]*nv[2];
-        cosT = dccv_dot_nv/dcc;
+        dccv_dot_sv = dccv[0]*sv[0] + dccv[1]*sv[1] + dccv[2]*sv[2];
 
-        nv_nodia[0] = nv[0] - dccv[0]/dccv_dot_nv;
-        nv_nodia[1] = nv[1] - dccv[1]/dccv_dot_nv;
-        nv_nodia[2] = nv[2] - dccv[2]/dccv_dot_nv;
+        deltav[0] = dccv[0]*pow(ss, 2.0)/dccv_dot_sv;
+        deltav[1] = dccv[1]*pow(ss, 2.0)/dccv_dot_sv;
+        deltav[2] = dccv[2]*pow(ss, 2.0)/dccv_dot_sv;
+        delta = dcc*pow(ss, 2.0)/dccv_dot_sv;
 
-        f = dc1p/dcc;
+        sv_nodia[0] = sv[0] - deltav[0];
+        sv_nodia[1] = sv[1] - deltav[1];
+        sv_nodia[2] = sv[2] - deltav[2];
 
         // conve u
-        rof  = f*ro[ic0] +(1.0-f)*ro[ic1];
-        v.p["ro"][ip] = rof;
+        rof  = fxp[ip]*ro[ic0] +(1.0-fxp[ip])*ro[ic1];
+        rop[ip] = rof;
 
-        Uxf = f*(Ux[ic0] + dPdx[ic0]*cfg.dt/ro[ic0]) +(1.0-f)*(Ux[ic1] + dPdx[ic1]*cfg.dt/ro[ic1]);
-        Uyf = f*(Uy[ic0] + dPdy[ic0]*cfg.dt/ro[ic0]) +(1.0-f)*(Uy[ic1] + dPdy[ic1]*cfg.dt/ro[ic1]);
-        Uzf = f*(Uz[ic0] + dPdz[ic0]*cfg.dt/ro[ic0]) +(1.0-f)*(Uz[ic1] + dPdz[ic1]*cfg.dt/ro[ic1]);
+        Uxf = fxp[ip]*(Ux[ic0] + dPdx[ic0]*cfg.dt/ro[ic0]) +(1.0-fxp[ip])*(Ux[ic1] + dPdx[ic1]*cfg.dt/ro[ic1]);
+        Uyf = fxp[ip]*(Uy[ic0] + dPdy[ic0]*cfg.dt/ro[ic0]) +(1.0-fxp[ip])*(Uy[ic1] + dPdy[ic1]*cfg.dt/ro[ic1]);
+        Uzf = fxp[ip]*(Uz[ic0] + dPdz[ic0]*cfg.dt/ro[ic0]) +(1.0-fxp[ip])*(Uz[ic1] + dPdz[ic1]*cfg.dt/ro[ic1]);
 
         US = Uxf*sv[0] + Uyf*sv[1] + Uzf*sv[2];
 
-        //temp temp_ndia = +(   (f*v.c["dPdx"][ic0]+(1.0-f)*v.c["dPdx"][ic1]) *nv_nodia[0]   // non-diagonal term 
-        //temp                + (f*v.c["dPdy"][ic0]+(1.0-f)*v.c["dPdy"][ic1]) *nv_nodia[1] 
-        //temp                + (f*v.c["dPdz"][ic0]+(1.0-f)*v.c["dPdz"][ic1]) *nv_nodia[2] )*ss ;
-        temp_ndia = 0.0;
+        temp_ndia = (fxp[ip]*dPdx[ic0]+(1.0-fxp[ip])*dPdx[ic1]) *sv_nodia[0]   // non-diagonal term 
+                  + (fxp[ip]*dPdy[ic0]+(1.0-fxp[ip])*dPdy[ic1]) *sv_nodia[1] 
+                  + (fxp[ip]*dPdz[ic0]+(1.0-fxp[ip])*dPdz[ic1]) *sv_nodia[2]  ;
 
-        //temp US += (-(v.c["P"][ic1] - v.c["P"][ic0])/dcc*ss/cosT - temp_ndia)*cfg.dt/rof;
-        US += (-(P[ic1] - P[ic0])/dcc*ss)*cfg.dt/rof;
+        US += (-(P[ic1] - P[ic0])/dcc*delta - temp_ndia)*cfg.dt/rof;
 
         USp[ip] = US;
 

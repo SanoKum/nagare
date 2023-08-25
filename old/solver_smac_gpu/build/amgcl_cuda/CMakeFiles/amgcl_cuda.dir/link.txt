@@ -1,0 +1,2 @@
+/usr/bin/ar qc libamgcl_cuda.a CMakeFiles/amgcl_cuda.dir/amgcl_cuda_generated_solvePoisson_amgcl_cuda.cu.o
+/usr/bin/ranlib libamgcl_cuda.a

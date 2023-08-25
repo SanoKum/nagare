@@ -30,8 +30,15 @@ bcond::~bcond()
 {
     for (auto& item : this->bvar_d)
     {
-        cudaWrapper::cudaFree_wrapper(item.second);
+        //cudaWrapper::cudaFree_wrapper(item.second);
+        //TEMP CHECK_CUDA_ERROR( cudaFree(item.second) );
+        CHECK_CUDA_ERROR( cudaFree(item.second) );
+
     }
+    CHECK_CUDA_ERROR( cudaFree(this->map_bplane_plane_d) );
+    //cudaWrapper::cudaFree_wrapper(this->map_bplane_cell_d);
+    CHECK_CUDA_ERROR( cudaFree(this->map_bplane_cell_d) );
+
 }
 bcond::bcond(const geom_int& physID, const vector<geom_int>& iPlanes, 
              const vector<geom_int>& iCells , const vector<geom_int>& iBPlanes)
@@ -54,9 +61,9 @@ void bcond::bcondInit(const string &bcondKind,
 mesh::mesh(){}
 mesh::~mesh()
 {
-    cudaWrapper::cudaFree_wrapper(this->map_plane_cells_d);
-    cudaWrapper::cudaFree_wrapper(this->map_bplane_plane_d);
-    cudaWrapper::cudaFree_wrapper(this->map_bplane_cell_d);
+    //cudaWrapper::cudaFree_wrapper(this->map_plane_cells_d);
+    CHECK_CUDA_ERROR( cudaFree(this->map_nplane_cells_d) );
+    //udaWrapper::cudaFree_wrapper(this->map_bplane_plane_d);
 }
 mesh::mesh(geom_int& nNodes,geom_int& nPlanes,geom_int& nCells, geom_int& nNormalPlanes, 
     geom_int& nBPlanes, geom_int& nBconds,
@@ -245,23 +252,31 @@ void mesh::readMesh(string fname)
             this->bconds[ib].iPlanes[ip] = iPlanes[ip];
         }
 
+
+        // iBPlanes
+        std::vector<geom_int> iBPlanes;
+        grp.getDataSet("iBPlanes").read(iBPlanes);
+
+        this->bconds[ib].iBPlanes.resize(iBPlanes.size());
+        for (geom_int ibp = 0 ; ibp<iBPlanes.size() ; ibp++)
+        {
+            this->bconds[ib].iBPlanes[ibp] = iBPlanes[ibp];
+        }
+
         ib += 1;
     }
 }
 
 void mesh::setMeshMap_d()
 {
-    geom_int n = this->nNormalPlanes*2 + this->nBPlanes;
-    cudaMalloc((void **)&(this->map_plane_cells_d) , sizeof(geom_int)*n);
-    cudaMalloc((void **)&(this->map_bplane_plane_d), sizeof(geom_int)*this->nBPlanes);
-    cudaMalloc((void **)&(this->map_bplane_cell_d) , sizeof(geom_int)*this->nBPlanes);
+    CHECK_CUDA_ERROR(cudaMalloc((void **)&(this->map_nplane_cells_d), sizeof(geom_int)*this->nNormalPlanes*2));
+    //cudaMalloc((void **)&(this->map_bplane_plane_d), sizeof(geom_int)*this->nBPlanes);
+    //cudaMalloc((void **)&(this->map_bplane_cell_d) , sizeof(geom_int)*this->nBPlanes);
 
     geom_int* pc_h;
     geom_int* bp_h;
     geom_int* bc_h;
-    pc_h = (geom_int *)malloc(sizeof(geom_int)*n);
-    bp_h = (geom_int *)malloc(sizeof(geom_int)*this->nBPlanes);
-    bc_h = (geom_int *)malloc(sizeof(geom_int)*this->nBPlanes);
+    pc_h = (geom_int *)malloc(sizeof(geom_int)*this->nNormalPlanes*2);
 
     for (geom_int ip=0; ip<this->nNormalPlanes; ip++)
     {
@@ -269,42 +284,33 @@ void mesh::setMeshMap_d()
         pc_h[2*ip + 1] = this->planes[ip].iCells[1]; 
     }
 
-    for (geom_int ip=this->nNormalPlanes; ip<this->nPlanes; ip++)
-    {
-        pc_h[ip+this->nNormalPlanes] = this->planes[ip].iCells[0]; 
-    }
-
-    //for (geom_int ip=0; ip<this->nNormalPlanes; ip++)
-    //{
-    //    printf("before ip=%d, ic0=%d, ic1=%d\n" , ip , pc_h[2*ip+0], pc_h[2*ip+1]);
-    //}
-    //for (geom_int ip=this->nNormalPlanes; ip<this->nPlanes; ip++)
-    //{
-    //    printf("before bp ip=%d, ic0=%d\n", ip, pc_h[ip+this->nNormalPlanes] ); 
-    //}
-
-    geom_int ib = 0;
-    for (bcond& bc : this->bconds)
-    {
-        for (geom_int ibl=0 ; ibl<bc.iPlanes.size() ; ibl++)
-        {
-            bp_h[ib] = bc.iPlanes[ibl];
-            bc_h[ib] = bc.iCells[ibl];
-            ib += 1;
-        }
-    }
-
-    cudaMemcpy(this->map_plane_cells_d  , pc_h , 
-               sizeof(geom_int)*(this->nNormalPlanes*2 + this->nBPlanes) , cudaMemcpyHostToDevice);
-    cudaMemcpy(this->map_bplane_plane_d , bp_h , 
-               sizeof(geom_int)*(this->nBPlanes) , cudaMemcpyHostToDevice);
-    cudaMemcpy(this->map_bplane_cell_d  , bc_h ,
-               sizeof(geom_int)*(this->nBPlanes) , cudaMemcpyHostToDevice);
+    CHECK_CUDA_ERROR(cudaMemcpy(this->map_nplane_cells_d  , pc_h , 
+                     sizeof(geom_int)*(this->nNormalPlanes*2) , cudaMemcpyHostToDevice));
 
     free(pc_h); 
-    free(bp_h); 
-    free(bc_h);
 
+
+    for (bcond& bc : this->bconds)
+    {
+        bp_h = (geom_int *)malloc(sizeof(geom_int)*bc.iPlanes.size());
+        bc_h = (geom_int *)malloc(sizeof(geom_int)*bc.iPlanes.size());
+        CHECK_CUDA_ERROR(cudaMalloc((void **)&(bc.map_bplane_plane_d), sizeof(geom_int)*bc.iPlanes.size()));
+        CHECK_CUDA_ERROR(cudaMalloc((void **)&(bc.map_bplane_cell_d) , sizeof(geom_int)*bc.iPlanes.size()));
+
+        for (geom_int ibl=0 ; ibl<bc.iPlanes.size() ; ibl++)
+        {
+            bp_h[ibl] = bc.iPlanes[ibl];
+            bc_h[ibl] = bc.iCells[ibl];
+        }
+
+        CHECK_CUDA_ERROR(cudaMemcpy(bc.map_bplane_plane_d , bp_h , 
+                         sizeof(geom_int)*(bc.iPlanes.size()) , cudaMemcpyHostToDevice));
+
+        CHECK_CUDA_ERROR(cudaMemcpy(bc.map_bplane_cell_d , bc_h , 
+                         sizeof(geom_int)*(bc.iPlanes.size()) , cudaMemcpyHostToDevice));
+        free(bp_h); 
+        free(bc_h);
+    }
 };
 
 matrix::matrix(){}
@@ -327,7 +333,6 @@ void matrix::initMatrix(mesh& msh)
         i = 1;
     }
 
-    //for (ic=0; ic<msh.nCells; ic++)
     for (ip=0; ip<msh.nNormalPlanes; ip++)
     {
         ic0 = msh.planes[ip].iCells[0];
@@ -348,3 +353,4 @@ void matrix::initMatrix(mesh& msh)
     }
 
 }
+

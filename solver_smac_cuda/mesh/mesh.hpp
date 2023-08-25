@@ -62,6 +62,10 @@ struct bcond
 
     std::map<std::string,int> valueTypes; // {P, 0}, {T, 1}, etc.
 
+    //cuda
+    geom_int* map_bplane_plane_d;
+    geom_int* map_bplane_cell_d;
+
     bcond();
     bcond(const geom_int& , const std::vector<geom_int>& , 
           const std::vector<geom_int>& , const std::vector<geom_int>& );
@@ -83,9 +87,7 @@ public:
     std::vector<bcond> bconds;
 
     // cuda
-    geom_int* map_plane_cells_d;
-    geom_int* map_bplane_plane_d;
-    geom_int* map_bplane_cell_d;
+    geom_int* map_nplane_cells_d;
 
     mesh();
     ~mesh();
@@ -113,6 +115,10 @@ public:
     std::vector<flow_float> rhs;
 
     std::vector<std::vector<geom_int>> localPlnOfCell;
+
+    std::vector<flow_float> row_index;
+    std::vector<flow_float> col_index;
+    std::vector<flow_float> value;
 
     matrix();
 

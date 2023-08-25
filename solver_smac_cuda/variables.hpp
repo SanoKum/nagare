@@ -40,19 +40,23 @@ public:
         "USN", "Ux" , "Uy" , "Uz", "ro" , "P",
 
         // Mesh Structure
-        "sx" , "sy" , "sz" , "ss" ,
+        "sx"  , "sy" , "sz" , "ss" ,
         "pcx" , "pcy" , "pcz" ,
-        "fx" , 
+        "fx"  , 
+        "dcc"   // dcc: distance between two cell centers
     };
 
     const std::list<std::string> output_cellValNames = 
     {
-        "ro"  , "Ux"  , "Uy"  , "Uz"  , "T" , "P" , 
-        "divU" , "divU_star",
+        "ro"    , "Ux"  , "Uy"  , "Uz"  , "T" , "P" , 
+        "divU"  , "divU*vol",
         "convx" , "convy" , "convz" , 
         "diffx" , "diffy" , "diffz" , 
-        "dPPdx" , "dPPdy"   , "dPPdz",
-        "dP"  ,
+        "dPPdx" , "dPPdy" , "dPPdz",
+        "dP"    , "dPdx"  , "dPdy" , "dPdz",
+        //"dUxdx", "dUydx", "dUzdx",
+        //"dUxdy", "dUydy", "dUzdy",
+        //"dUxdz", "dUydz", "dUzdz",
         "cfl"
     };
 
@@ -67,9 +71,13 @@ public:
     variables(mesh&);
     ~variables();
 
-    void copyVariables_cell_plane_H2D();
+    void copyVariables_cell_plane_H2D_all();
+    void copyVariables_cell_H2D (std::string );
+    void copyVariables_plane_H2D(std::string );
 
-    void copyVariables_cell_plane_D2H();
+    void copyVariables_cell_plane_D2H_all();
+    void copyVariables_cell_D2H (std::string );
+    void copyVariables_plane_D2H(std::string );
 
-    void setStructualVariables_d(cudaConfig& cuda_cfg , mesh& msh , variables& v);
+    void setStructualVariables_d(cudaConfig& cuda_cfg , mesh& msh);
 };

@@ -16,6 +16,8 @@
 #include "output/output.hpp"
 #include "boundaryCond.hpp"
 
+#include "setStructualVariables.hpp"
+
 #include "gradient.hpp"
 
 #include "solvePoisson_amgcl.hpp"
@@ -56,8 +58,13 @@ int main(void) {
     readAndSetBcondConfig(msh.bconds);
 
     cout << "Set Initial Values \n";
+    cout << "a\n";
     variables var = variables(msh);
+    cout << "b\n";
     setInitial(cfg , msh , var);
+    cout << "c\n";
+
+    setStructualVariables(cfg , msh , var);
 
     updateVariablesForNextLoop(cfg , msh , var , mat_poi);
 
@@ -72,6 +79,8 @@ int main(void) {
         solveNavierStokes(cfg , msh , var , mat_ns);
 
         setMatrixPoisson(cfg , msh , var , mat_poi);
+
+        //solvePoisson(cfg , msh , var , mat_poi);
 
         if (cfg.gpu == 0) {
             solvePoisson(cfg , msh , var , mat_poi);

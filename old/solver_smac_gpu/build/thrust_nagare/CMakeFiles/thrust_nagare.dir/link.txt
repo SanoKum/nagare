@@ -1,0 +1,2 @@
+/usr/bin/ar qc libthrust_nagare.a CMakeFiles/thrust_nagare.dir/thrust_nagare_generated_variables_thrust.cu.o CMakeFiles/thrust_nagare.dir/thrust_nagare_generated_setInitial_thrust.cu.o CMakeFiles/thrust_nagare.dir/thrust_nagare_generated_update_thrust.cu.o CMakeFiles/thrust_nagare.dir/thrust_nagare_generated_copyDeviceToHost_cell.cu.o
+/usr/bin/ranlib libthrust_nagare.a

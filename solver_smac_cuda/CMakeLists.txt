@@ -1,34 +1,44 @@
 cmake_minimum_required(VERSION 3.18)
-project(nagare CXX)
-# hello.cppとgood_morning.cppをコンパイルして静的ライブラリlibgreetings.aを作成
-# a.outという実行ファイルをmain.cppから作成
+project(nagare CUDA CXX)
 
-#set(CMAKE_CXX_COMPILER "/usr/bin/g++" CACHE string "g++ compiler" FORCE)
+
 set(CMAKE_CXX_COMPILER /usr/bin/g++ )
-
 #add_definitions( -std=c++11 -Wall )
 add_definitions( -std=c++2a )
+set(CMAKE_CXX_FLAGS "-O3 -fopenmp")
 
-set(CMAKE_CXX_FLAGS "-O3")
+#cuda
+set(libs_all_cuda cusparse cusolver rt dl)
+set(dyn_libs_cuda amgxsh rt dl cudart_static cublas)
 
-include_directories(./ /home/kumpei/src/HighFive/include /home/kumpei/util/hdf5-1.14.0/include /home/kumpei/util/amgcl/include)
-link_directories(./ /home/kumpei/util/hdf5-1.14.0/lib)
+#amgx
+set(AMGX_INCLUDES ${THRUST_DIR} /home/kumpei/src/AMGX/include )
+set(AMGX_LIB_DIR /home/kumpei/src/AMGX/build)
 
-#add_library(nagare STATIC gradient.cpp)
+#hdf
+set(hdf5_inc /home/kumpei/src/HighFive/include /home/kumpei/src/hdf/HDF5-1.14.1-Linux/HDF_Group/HDF5/1.14.1/include)
+set(hdf5_libdir /home/kumpei/src/hdf/HDF5-1.14.1-Linux/HDF_Group/HDF5/1.14.1/lib)
 
-add_executable(nagare main.cpp gradient.cpp mesh/mesh.cpp output/output.cpp update.cpp variables.cpp boundaryCond.cpp solvePoisson_amgcl.cpp solveNavierStokes.cpp input/solverConfig.cpp calcCFL.cpp setStructualVariables.cpp)
+include_directories(./ ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${hdf5_inc} ${AMGX_INCLUDES})
+link_directories(./ ${hdf5_libdir} ${AMGX_LIB_DIR} ${CUDA_LIB_DIR})
 
-add_executable(convertGmshToNagare mesh/convertGmshToNagare.cpp mesh/mesh.cpp variables.cpp boundaryCond.cpp input/solverConfig.cpp )
+# --------------
+# *** nagare ***
+# --------------
+add_executable(nagare main.cpp gradient.cpp mesh/mesh.cpp output/output.cpp update.cpp 
+                variables.cpp boundaryCond.cpp solveNavierStokes.cpp input/solverConfig.cpp 
+                calcCFL.cpp setStructualVariables.cpp  solvePoisson_amgx.cpp)
 
-target_link_libraries(nagare hdf5 yaml-cpp)
-target_link_libraries(convertGmshToNagare hdf5 yaml-cpp)
+target_include_directories(nagare PUBLIC cuda_nagare )
 
-add_subdirectory(amgcl_cuda)
 add_subdirectory(cuda_nagare)
-target_include_directories(nagare PUBLIC amgcl_cuda)
-target_include_directories(nagare PUBLIC cuda_nagare)
-target_link_libraries(nagare amgcl_cuda)
 target_link_libraries(nagare cuda_nagare)
+target_link_libraries(nagare hdf5 yaml-cpp ${dyn_libs_cuda})
+#target_link_libraries(nagare ${libs_all_cuda})
 
+# ----------------------
+# *** mesh conversion***
+# ----------------------
+add_executable(convertGmshToNagare mesh/convertGmshToNagare.cpp mesh/mesh.cpp variables.cpp boundaryCond.cpp input/solverConfig.cpp )
+target_link_libraries(convertGmshToNagare hdf5 yaml-cpp)
 target_link_libraries(convertGmshToNagare cuda_nagare)
-

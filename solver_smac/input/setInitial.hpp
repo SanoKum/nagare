@@ -12,7 +12,7 @@ void setInitial(solverConfig& cfg , mesh& msh , variables& v)
     for (geom_int i = 0 ; i<msh.nCells ; i++)
     {
         v.c["T"][i] = 300.0;
-        v.c["Ux"][i] = 0.0;
+        v.c["Ux"][i] = 10.0;
         v.c["Uy"][i] = 0.0;
         v.c["Uz"][i] = 0.0;
         v.c["P"][i] = 0.0;

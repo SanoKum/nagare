@@ -11,7 +11,8 @@
 #include <mesh/elementType.hpp>
 #include <mesh/mesh.hpp>
 #include <common/stringUtil.hpp>
-#include <common/vectorUtil.hpp>
+#include "common/vectorUtil.hpp"
+#include "variables.hpp"
 
 #include <sstream>
 #include <fstream>
@@ -442,7 +443,7 @@ public:
             // iterate over each elements of a entity.
             //for (auto itEle = itEnt.elements.begin(), e2=itEnt.elements.end(); itEle != e2; ++itEle)
 
-            for (auto itEle : itEnt.elements)
+            for (auto& itEle : itEnt.elements)
             {
                 cell cell_now;
                 //cell_now.nNodes = eleType.nNodes;
@@ -458,50 +459,6 @@ public:
                     this->nodes[nodGlo].iCells.push_back(nCells_temp-1);
                 }
                 
-//                vector<vector<geom_int>> nodesOfPlane;
-//
-//                // *** make Planes 
-//                // iterate over each plane of a element.
-//                for (auto &plnLocal : nOrderPlanes)
-//                {
-//                    plane plane_now;
-//                    vector<geom_int> nodes_temp;
-//                    for (auto &nodLocal : plnLocal)
-//                    {
-//                        geom_int nodGlobal = itEle.iNodes[nodLocal];
-//                        nodes_temp.push_back(nodGlobal);
-//                    }
-//                    plane_now.iNodes = nodes_temp;
-//
-//                    // 重複しているプレーンかをチェックし、新しければ記録する
-//                    int iPlane_exist = 0;
-//                    bool ifAlreadyExists = false;
-//                    //for (auto &itPlnEx : nodesOfPlanes)
-//                    for (auto &pls : planes)
-//                    {
-//                        if (ifEqualComponent(pls.iNodes, plane_now.iNodes)) // already exists
-//                        {
-//                            ifAlreadyExists = true;
-//                            break;
-//                        }
-//                        iPlane_exist += 1;
-//                    }
-//
-//                    if (!ifAlreadyExists){ // new
-//                        nPlanes_temp += 1;
-//                        plane_now.iCells.push_back(nCells_temp-1);
-//
-//                        this->planes.push_back(plane_now);
-//
-//                    } else { // already exists
-//                        this->planes[iPlane_exist].iCells.push_back(nCells_temp-1);
-//                        if (this->planes[iPlane_exist].iCells.size() != 2)
-//                        {
-//                            cerr << "Error: something wrong when merging planes" << endl;
-//                            exit(EXIT_FAILURE);
-//                        }
-//                    }
-//                }
             }
         }
 
@@ -1235,7 +1192,7 @@ public:
             Group group = file.createGroup("/BCONDS/"+oss.str());
 
             group.createDataSet("/BCONDS/"+oss.str()+"/iPlanes", bc.iPlanes);
-            //group.createDataSet("/BCONDS/"+oss.str()+"/iBPlanes", bc.iBPlanes);
+            group.createDataSet("/BCONDS/"+oss.str()+"/iBPlanes", bc.iBPlanes);
             group.createDataSet("/BCONDS/"+oss.str()+"/iCells", bc.iCells);
 
             string ATTRIBUTE_NAME_NOTE("bcondKind");

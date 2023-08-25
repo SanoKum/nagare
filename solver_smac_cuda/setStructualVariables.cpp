@@ -26,6 +26,7 @@ void setStructualVariables(solverConfig& cfg , mesh& msh , variables& v)
     geom_float f;
 
     std::vector<flow_float>& fxp = v.p["fx"];
+    std::vector<flow_float>& dccp = v.p["dcc"];
 
     // normal plane
     for (geom_int ip=0 ; ip<msh.nNormalPlanes ; ip++)
@@ -52,9 +53,12 @@ void setStructualVariables(solverConfig& cfg , mesh& msh , variables& v)
         dc2pv[0] = pcent[0] - c2cent[0];
         dc2pv[1] = pcent[1] - c2cent[1];
         dc2pv[2] = pcent[2] - c2cent[2];
-        dc2p    = sqrt( pow(dc2pv[0], 2.0) + pow(dc2pv[1], 2.0) + pow(dc2pv[2], 2.0));
+        dc2p     = sqrt( pow(dc2pv[0], 2.0) + pow(dc2pv[1], 2.0) + pow(dc2pv[2], 2.0));
 
-        fxp[ip] = dc2p/dcc;
+        fxp[ip]  = dc2p/dcc;
+        dccp[ip] = dcc;
+
+        //printf("cpu ip=%d, fx=%f, dcc=%f\n", ip, fxp[ip], dccp[ip]);
     }
 
 }

@@ -16,6 +16,6 @@ void setInitial(solverConfig& cfg , mesh& msh , variables& v)
         v.c["Uy"][i] = 0.0;
         v.c["Uz"][i] = 0.0;
         v.c["P"][i] = 0.0;
-        v.c["ro"][i] = 1.2;
+        v.c["ro"][i] = 1.0;
     }
 };

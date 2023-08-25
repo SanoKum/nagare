@@ -16,13 +16,13 @@ physProp:
 time: 
   last: 
     control: 0 # 0:nStep , 1:time base
-    nStep: 100
+    nStep: 5000
     time: 0.1 # [second]
   deltaT:  
     control: 0 # 0:use dt , 1:use cfl
     dt: 0.00005
     cfl: 0.5 
-  outStepInterval: 10
+  outStepInterval: 100
 
 space: 
   convMethod: 1 # 1:"1stUp", 2:"2ndUp"

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libthrust_cuda.a CMakeFiles/thrust_cuda.dir/thrust_cuda_generated_variables_thrust.cu.o CMakeFiles/thrust_cuda.dir/thrust_cuda_generated_setInitial_thrust.cu.o
+/usr/bin/ranlib libthrust_cuda.a

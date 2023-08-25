@@ -75,10 +75,10 @@ void updateVariablesForNextLoop(solverConfig& cfg , mesh& msh , variables& v , m
         diffy[ic] = 0.0;
         diffz[ic] = 0.0;
 
-        src[ic] = 0.0;
-        res[ic] = 0.0;
+        //src[ic] = 0.0;
+        //res[ic] = 0.0;
 
-        diffT[ic] = 0.0;
+        //diffT[ic] = 0.0;
         dP[ic] = 0.0;
         dPPdx[ic] = 0.0;
         dPPdy[ic] = 0.0;

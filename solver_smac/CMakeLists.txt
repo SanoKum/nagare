@@ -9,14 +9,14 @@ set(CMAKE_CXX_COMPILER /usr/bin/g++ )
 #add_definitions( -std=c++11 -Wall )
 add_definitions( -std=c++2a )
 
-set(CMAKE_CXX_FLAGS "-O3 -pg")
+set(CMAKE_CXX_FLAGS "-O3")
 
 include_directories(./ /home/kumpei/src/HighFive/include /home/kumpei/util/hdf5-1.14.0/include /home/kumpei/util/amgcl/include)
 link_directories(./ /home/kumpei/util/hdf5-1.14.0/lib)
 
 #add_library(nagare STATIC gradient.cpp)
 
-add_executable(nagare main.cpp gradient.cpp mesh/mesh.cpp output/output.cpp update.cpp variables.cpp boundaryCond.cpp solvePoisson_amgcl.cpp solveNavierStokes.cpp input/solverConfig.cpp calcCFL.cpp)
+add_executable(nagare main.cpp gradient.cpp mesh/mesh.cpp output/output.cpp update.cpp variables.cpp boundaryCond.cpp solvePoisson_amgcl.cpp solveNavierStokes.cpp input/solverConfig.cpp calcCFL.cpp setStructualVariables.cpp)
 
 add_executable(convertGmshToNagare mesh/convertGmshToNagare.cpp mesh/mesh.cpp variables.cpp boundaryCond.cpp input/solverConfig.cpp )
 

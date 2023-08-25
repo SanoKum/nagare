@@ -16,53 +16,78 @@ variables::variables(mesh& msh)
     {
         this->c[cellValName].resize(msh.nCells);
 
-        cudaWrapper::cudaMalloc_wrapper(this->c_d[cellValName] , msh.nCells);
+        //cudaWrapper::cudaMalloc_wrapper(&(this->c_d[cellValName]) , msh.nCells);
+        CHECK_CUDA_ERROR( cudaMalloc((void**) &(this->c_d[cellValName]), msh.nCells*sizeof(flow_float)) );
+
     }
     for (auto& planeValName : planeValNames)
     {
         this->p[planeValName].resize(msh.nPlanes);
 
-        cudaWrapper::cudaMalloc_wrapper(this->p_d[planeValName] , msh.nPlanes);
+        //cudaWrapper::cudaMalloc_wrapper(&(this->p_d[planeValName]) , msh.nPlanes);
+        CHECK_CUDA_ERROR( cudaMalloc((void**) &(this->p_d[planeValName]), msh.nPlanes*sizeof(flow_float)) );
     }
 }
 
 variables::~variables()
 {
-    for (auto& item : this->c_d)
+
+    for (auto& cellValName : cellValNames)
     {
-        cudaWrapper::cudaFree_wrapper(item.second);
+        CHECK_CUDA_ERROR( cudaFree(this->c_d[cellValName]) );
     }
-    for (auto& item : this->p_d)
+
+    for (auto& planeValName : planeValNames)
     {
-        cudaWrapper::cudaFree_wrapper(item.second);
+        CHECK_CUDA_ERROR( cudaFree(this->p_d[planeValName]) );
     }
+
 }
 
-void variables::copyVariables_cell_plane_H2D()
+void variables::copyVariables_cell_plane_H2D_all()
 {
     for (auto& name : this->cellValNames)
     {
-        cudaWrapper::cudaMemcpy_vectorToDevice_wrapper(this->c[name] , this->c_d[name]);
+        cudaWrapper::cudaMemcpy_H2D_wrapper(this->c[name].data() , this->c_d[name], this->c[name].size());
     }
     for (auto& name : this->planeValNames)
     {
-        cudaWrapper::cudaMemcpy_vectorToDevice_wrapper(this->p[name] , this->p_d[name]);
+        cudaWrapper::cudaMemcpy_H2D_wrapper(this->p[name].data() , this->p_d[name], this->p[name].size());
     }
 }
 
-void variables::copyVariables_cell_plane_D2H()
+void variables::copyVariables_cell_H2D(std::string name)
+{
+    cudaWrapper::cudaMemcpy_H2D_wrapper(this->c[name].data() , this->c_d[name], this->c[name].size());
+}
+void variables::copyVariables_plane_H2D(std::string name)
+{
+    cudaWrapper::cudaMemcpy_H2D_wrapper(this->p[name].data() , this->p_d[name], this->c[name].size());
+}
+
+void variables::copyVariables_cell_plane_D2H_all()
 {
     for (auto& name : this->cellValNames)
     {
-        cudaWrapper::cudaMemcpy_deviceToVector_wrapper(this->c_d[name] , this->c[name]);
+        cudaWrapper::cudaMemcpy_D2H_wrapper(this->c_d[name], this->c[name].data() , this->c[name].size());
     }
     for (auto& name : this->planeValNames)
     {
-        cudaWrapper::cudaMemcpy_deviceToVector_wrapper(this->p_d[name] , this->p[name]);
+        cudaWrapper::cudaMemcpy_D2H_wrapper(this->p_d[name], this->p[name].data() , this->p[name].size());
     }
 }
 
-void variables::setStructualVariables_d(cudaConfig& cuda_cfg , mesh& msh , variables& v)
+void variables::copyVariables_cell_D2H(std::string name)
+{
+    cudaWrapper::cudaMemcpy_D2H_wrapper(this->c_d[name], this->c[name].data(), this->c[name].size());
+}
+
+void variables::copyVariables_plane_D2H(std::string name)
+{
+    cudaWrapper::cudaMemcpy_D2H_wrapper(this->p_d[name], this->p[name].data(), this->p[name].size());
+}
+
+void variables::setStructualVariables_d(cudaConfig& cuda_cfg , mesh& msh )
 {
     geom_float* sx;
     geom_float* sy;
@@ -109,7 +134,7 @@ void variables::setStructualVariables_d(cudaConfig& cuda_cfg , mesh& msh , varia
         volume[ic] = msh.cells[ic].volume;
     }
 
-    cudaMemcpy(this->p_d["sx"] , sx , msh.nPlanes*sizeof(geom_float) , cudaMemcpyHostToDevice);
+    gpuErrchk(cudaMemcpy(this->p_d["sx"] , sx , msh.nPlanes*sizeof(geom_float) , cudaMemcpyHostToDevice));
     cudaMemcpy(this->p_d["sy"] , sy , msh.nPlanes*sizeof(geom_float) , cudaMemcpyHostToDevice);
     cudaMemcpy(this->p_d["sz"] , sz , msh.nPlanes*sizeof(geom_float) , cudaMemcpyHostToDevice);
     cudaMemcpy(this->p_d["ss"] , ss , msh.nPlanes*sizeof(geom_float) , cudaMemcpyHostToDevice);
@@ -121,9 +146,9 @@ void variables::setStructualVariables_d(cudaConfig& cuda_cfg , mesh& msh , varia
     cudaMemcpy(this->c_d["ccx"] , ccx , msh.nCells*sizeof(geom_float) , cudaMemcpyHostToDevice);
     cudaMemcpy(this->c_d["ccy"] , ccy , msh.nCells*sizeof(geom_float) , cudaMemcpyHostToDevice);
     cudaMemcpy(this->c_d["ccz"] , ccz , msh.nCells*sizeof(geom_float) , cudaMemcpyHostToDevice);
-    cudaMemcpy(this->c_d["volume"] , ccz , msh.nCells*sizeof(geom_float) , cudaMemcpyHostToDevice);
+    cudaMemcpy(this->c_d["volume"] , volume , msh.nCells*sizeof(geom_float) , cudaMemcpyHostToDevice);
 
-    calcStructualVariables_d_wrapper(cuda_cfg , msh , v);
+    calcStructualVariables_d_wrapper(cuda_cfg , msh , *this);
 
     //for (geom_int ip=0; ip<msh.nPlanes; ip++)
     //{

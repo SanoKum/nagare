@@ -1,0 +1,65 @@
+Performing C++ SOURCE FILE Test CMAKE_HAVE_LIBC_PTHREAD failed with the following output:
+Change Dir: /home/kumpei/work/nagare/solver_smac_gpu/build/CMakeFiles/CMakeScratch/TryCompile-XKyd7Y
+
+Run Build Command(s):/usr/bin/make -f Makefile cmTC_ab48e/fast && make[1]: ディレクトリ '/home/kumpei/work/nagare/solver_smac_gpu/build/CMakeFiles/CMakeScratch/TryCompile-XKyd7Y' に入ります
+/usr/bin/make  -f CMakeFiles/cmTC_ab48e.dir/build.make CMakeFiles/cmTC_ab48e.dir/build
+make[2]: ディレクトリ '/home/kumpei/work/nagare/solver_smac_gpu/build/CMakeFiles/CMakeScratch/TryCompile-XKyd7Y' に入ります
+Building CXX object CMakeFiles/cmTC_ab48e.dir/src.cxx.o
+/usr/bin/g++ -DCMAKE_HAVE_LIBC_PTHREAD  -O3  -o CMakeFiles/cmTC_ab48e.dir/src.cxx.o -c /home/kumpei/work/nagare/solver_smac_gpu/build/CMakeFiles/CMakeScratch/TryCompile-XKyd7Y/src.cxx
+Linking CXX executable cmTC_ab48e
+/usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ab48e.dir/link.txt --verbose=1
+/usr/bin/g++ -O3  CMakeFiles/cmTC_ab48e.dir/src.cxx.o -o cmTC_ab48e 
+/usr/bin/ld: CMakeFiles/cmTC_ab48e.dir/src.cxx.o: in function `main':
+src.cxx:(.text.startup+0x29): undefined reference to `pthread_create'
+/usr/bin/ld: src.cxx:(.text.startup+0x32): undefined reference to `pthread_detach'
+/usr/bin/ld: src.cxx:(.text.startup+0x3b): undefined reference to `pthread_cancel'
+/usr/bin/ld: src.cxx:(.text.startup+0x46): undefined reference to `pthread_join'
+collect2: error: ld returned 1 exit status
+make[2]: *** [CMakeFiles/cmTC_ab48e.dir/build.make:99: cmTC_ab48e] エラー 1
+make[2]: ディレクトリ '/home/kumpei/work/nagare/solver_smac_gpu/build/CMakeFiles/CMakeScratch/TryCompile-XKyd7Y' から出ます
+make[1]: *** [Makefile:127: cmTC_ab48e/fast] エラー 2
+make[1]: ディレクトリ '/home/kumpei/work/nagare/solver_smac_gpu/build/CMakeFiles/CMakeScratch/TryCompile-XKyd7Y' から出ます
+
+
+Source file was:
+#include <pthread.h>
+
+static void* test_func(void* data)
+{
+  return data;
+}
+
+int main(void)
+{
+  pthread_t thread;
+  pthread_create(&thread, NULL, test_func, NULL);
+  pthread_detach(thread);
+  pthread_cancel(thread);
+  pthread_join(thread, NULL);
+  pthread_atfork(NULL, NULL, NULL);
+  pthread_exit(NULL);
+
+  return 0;
+}
+
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/kumpei/work/nagare/solver_smac_gpu/build/CMakeFiles/CMakeScratch/TryCompile-ji7NDZ
+
+Run Build Command(s):/usr/bin/make -f Makefile cmTC_04426/fast && make[1]: ディレクトリ '/home/kumpei/work/nagare/solver_smac_gpu/build/CMakeFiles/CMakeScratch/TryCompile-ji7NDZ' に入ります
+/usr/bin/make  -f CMakeFiles/cmTC_04426.dir/build.make CMakeFiles/cmTC_04426.dir/build
+make[2]: ディレクトリ '/home/kumpei/work/nagare/solver_smac_gpu/build/CMakeFiles/CMakeScratch/TryCompile-ji7NDZ' に入ります
+Building CXX object CMakeFiles/cmTC_04426.dir/CheckFunctionExists.cxx.o
+/usr/bin/g++   -O3 -DCHECK_FUNCTION_EXISTS=pthread_create -o CMakeFiles/cmTC_04426.dir/CheckFunctionExists.cxx.o -c /home/kumpei/work/nagare/solver_smac_gpu/build/CMakeFiles/CMakeScratch/TryCompile-ji7NDZ/CheckFunctionExists.cxx
+Linking CXX executable cmTC_04426
+/usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_04426.dir/link.txt --verbose=1
+/usr/bin/g++ -O3 -DCHECK_FUNCTION_EXISTS=pthread_create CMakeFiles/cmTC_04426.dir/CheckFunctionExists.cxx.o -o cmTC_04426  -lpthreads 
+/usr/bin/ld: -lpthreads が見つかりません
+collect2: error: ld returned 1 exit status
+make[2]: *** [CMakeFiles/cmTC_04426.dir/build.make:99: cmTC_04426] エラー 1
+make[2]: ディレクトリ '/home/kumpei/work/nagare/solver_smac_gpu/build/CMakeFiles/CMakeScratch/TryCompile-ji7NDZ' から出ます
+make[1]: *** [Makefile:127: cmTC_04426/fast] エラー 2
+make[1]: ディレクトリ '/home/kumpei/work/nagare/solver_smac_gpu/build/CMakeFiles/CMakeScratch/TryCompile-ji7NDZ' から出ます
+
+
+

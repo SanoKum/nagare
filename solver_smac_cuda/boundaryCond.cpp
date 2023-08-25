@@ -12,8 +12,8 @@
 #include "mesh/mesh.hpp"
 #include "variables.hpp"
 
-#include "cuda_nagare/boundaryCond_d.cuh"
 #include "cuda_nagare/cudaWrapper.cuh"
+#include "cuda_nagare/boundaryCond_d.cuh"
 
 using namespace std;
 
@@ -98,8 +98,30 @@ void readAndSetBcondConfig(vector<bcond>& bconds)
             {
                 var = bc.inputFloats[vt.first];
             }
-            cudaWrapper::cudaMalloc_wrapper(bc.bvar_d[vt.first] , bc.bvar[vt.first].size());
-            cudaWrapper::cudaMemcpy_vectorToDevice_wrapper(bc.bvar[vt.first] , bc.bvar_d[vt.first]);
+            //std::cout << "\n" << "*** " << vt.first << " ***" <<"\n" ;
+
+            //for (flow_float& var : bc.bvar[vt.first])
+            //{
+            //    printf("host: %f ", var);
+            //}
+
+            CHECK_CUDA_ERROR( cudaMalloc(&(bc.bvar_d[vt.first]) , bc.iPlanes.size()*sizeof(flow_float)) );
+            CHECK_CUDA_ERROR( cudaMemcpy(bc.bvar_d[vt.first] , &bc.bvar[vt.first][0] , (size_t)(bc.iPlanes.size()*sizeof(flow_float)), cudaMemcpyHostToDevice) );
+
+            //flow_float *h_data = (flow_float *) malloc(bc.iPlanes.size()*sizeof(flow_float));
+            //std::vector<flow_float> h_data;
+            //h_data.resize(bc.iPlanes.size());
+            //CHECK_CUDA_ERROR( cudaMemcpy(&h_data[0] , bc.bvar_d[vt.first] , (size_t)(bc.iPlanes.size()*sizeof(flow_float)), cudaMemcpyDeviceToHost) );
+            //for (flow_float& var : h_data);
+            //for (auto var = h_data[0]; var!=h_data.end(); ++var))
+            //printf("\n");
+            //for (auto var : h_data) 
+            //{
+            //    printf("devi: %f ", var);
+            //}
+            //printf("\n");
+
+
         }
     }
 };
@@ -228,7 +250,7 @@ void slip(solverConfig& cfg , bcond& bc , mesh& msh , variables& var , matrix& m
         vector<flow_float> sv = msh.planes[ip].surfVect;
         flow_float ss = msh.planes[ip].surfArea;
 
-        Un =  (sv[0]*Uxp[icell] + sv[1]*Uyp[icell] + sv[2]*Uzp[icell])/ss;
+        Un =  (sv[0]*Ux[icell] + sv[1]*Uy[icell] + sv[2]*Uz[icell])/ss;
 
         Tp[ip]  = T[icell];
         Uxp[ip] = Ux[icell] - Un*sv[0]/ss;
@@ -242,8 +264,8 @@ void slip(solverConfig& cfg , bcond& bc , mesh& msh , variables& var , matrix& m
 
 void setBcondsValue(solverConfig& cfg , cudaConfig& cuda_cfg , mesh& msh , variables& var , matrix& mat_p)
 {
-    if (false) {
-        for (auto bc : msh.bconds)
+    if (cfg.gpu == 0) { // cpu
+        for (auto& bc : msh.bconds)
         {
             if      (bc.bcondKind == "wall_isothermal") { wall_isothermal(cfg , bc , msh , var , mat_p); } 
             else if (bc.bcondKind == "slip") { slip(cfg , bc , msh , var , mat_p); }
@@ -255,20 +277,44 @@ void setBcondsValue(solverConfig& cfg , cudaConfig& cuda_cfg , mesh& msh , varia
                 exit(EXIT_FAILURE);
             };
         }
-    } else {
-        for (auto bc : msh.bconds)
+    } else if (cfg.gpu ==1) { // gpu
+        for (auto& bc : msh.bconds)
         {
             //if      (bc.bcondKind == "wall_isothermal") { wall_isothermal_d(cfg , bc , msh , var , mat_p); } 
-            //else if (bc.bcondKind == "slip") { 
             if      (bc.bcondKind == "slip") slip_d_wrapper(cfg , cuda_cfg , bc , msh , var , mat_p); 
-            //else if (bc.bcondKind == "wall") wall_d_wrapper(cfg , cuda_cfg , bc , msh , var , mat_p); 
-            //else if (bc.bcondKind == "inlet_uniformVelocity") { inlet_uniformVelocity_d(cfg , bc , msh , var , mat_p); }
-            //else if (bc.bcondKind == "outlet_statPress") { outlet_statPress_d(cfg , bc , msh , var , mat_p); }
+            else if (bc.bcondKind == "wall") wall_d_wrapper(cfg , cuda_cfg , bc , msh , var , mat_p); 
+            else if (bc.bcondKind == "inlet_uniformVelocity") { inlet_uniformVelocity_d_wrapper(cfg , cuda_cfg , bc , msh , var , mat_p); }
+            else if (bc.bcondKind == "outlet_statPress") { outlet_statPress_d_wrapper(cfg , cuda_cfg , bc , msh , var , mat_p); }
             //else {
             //    cerr << "Error: unknown bcondKind " << bc.bcondKind << endl;
             //    exit(EXIT_FAILURE);
             //};
+            cudaThreadSynchronize();
         }
+//    } else if (cfg.gpu ==-1) { // gpu check
+//        for (auto& bc : msh.bconds)
+//        {
+////            //if      (bc.bcondKind == "wall_isothermal") { wall_isothermal_d(cfg , bc , msh , var , mat_p); } 
+////            if      (bc.bcondKind == "slip") slip_d_wrapper(cfg , cuda_cfg , bc , msh , var , mat_p); 
+////            else if (bc.bcondKind == "wall") wall_d_wrapper(cfg , cuda_cfg , bc , msh , var , mat_p); 
+////            else if (bc.bcondKind == "inlet_uniformVelocity") { inlet_uniformVelocity_d_wrapper(cfg , cuda_cfg , bc , msh , var , mat_p); }
+////            else if (bc.bcondKind == "outlet_statPress") { outlet_statPress_d_wrapper(cfg , cuda_cfg , bc , msh , var , mat_p); }
+////            //else {
+////            //    cerr << "Error: unknown bcondKind " << bc.bcondKind << endl;
+////            //    exit(EXIT_FAILURE);
+////            //};
+////            cudaThreadSynchronize();
+//            if      (bc.bcondKind == "wall_isothermal") { wall_isothermal(cfg , bc , msh , var , mat_p); } 
+//            else if (bc.bcondKind == "slip") { slip(cfg , bc , msh , var , mat_p); }
+//            else if (bc.bcondKind == "wall") { wall(cfg , bc , msh , var , mat_p); }
+//            else if (bc.bcondKind == "inlet_uniformVelocity") { inlet_uniformVelocity(cfg , bc , msh , var , mat_p); }
+//            else if (bc.bcondKind == "outlet_statPress") { outlet_statPress(cfg , bc , msh , var , mat_p); }
+//            else {
+//                cerr << "Error: unknown bcondKind " << bc.bcondKind << endl;
+//                exit(EXIT_FAILURE);
+//            };
+//
+//        }
     }
 }
 

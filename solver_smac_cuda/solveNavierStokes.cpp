@@ -223,7 +223,7 @@ void solveNavierStokes(solverConfig &cfg , mesh &msh , variables &v , matrix& ma
         Ux[ic] = UxN[ic] -dPdx[ic]/ro[ic]*cfg.dt + (-convx[ic] + diffx[ic] )*cfg.dt/vol/ro[ic];
         Uy[ic] = UyN[ic] -dPdy[ic]/ro[ic]*cfg.dt + (-convy[ic] + diffy[ic] )*cfg.dt/vol/ro[ic];
         Uz[ic] = UzN[ic] -dPdz[ic]/ro[ic]*cfg.dt + (-convz[ic] + diffz[ic] )*cfg.dt/vol/ro[ic];
-
+        //printf("%d UxN=%f, dt=%f, vol=%f, ro=%f, convx=%f, diffx=%f\n", ic, UxN[ic], cfg.dt, vol, ro[ic], convx[ic], diffx[ic]);
     }
 
     geom_float vol0;
@@ -324,6 +324,9 @@ void solveNavierStokes(solverConfig &cfg , mesh &msh , variables &v , matrix& ma
                 US += (-(Pp[ip] - P[ic0])/dn*ss)*cfg.dt/ro[ic0];
                 USp[ip] = US;
                 divU_vol[ic0] += US;
+
+                printf("ip=%d, US=%f, dPdx=%f, sx=%f, sy=%f, sz=%f, ss=%f, dn=%f, Pp=%f, P=%f, divU=%f\n", ip, US, dPdx[ic0], sv[0], sv[1], sv[2], ss, dn, Pp[ip], P[ic0], divU_vol[ic0]);
+
             }
         } else if (bc.bcondKind == "inlet_uniformVelocity" ) 
         {

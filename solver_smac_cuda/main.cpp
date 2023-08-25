@@ -21,7 +21,8 @@
 
 #include "gradient.hpp"
 
-#include "solvePoisson_amgcl.hpp"
+//#include "solvePoisson_amgcl.hpp"
+#include "solvePoisson_amgx.hpp"
 #include "solveNavierStokes.hpp"
 #include "update.hpp"
 
@@ -33,6 +34,25 @@
 // cuda
 #include "cuda_nagare/cudaWrapper.cuh"
 #include "cuda_nagare/cudaConfig.cuh"
+
+#include "cuda_nagare/calcGradient_d.cuh"
+#include "cuda_nagare/calcConvDiff_d.cuh"
+#include "cuda_nagare/updateCenterVelocity_d.cuh"
+#include "cuda_nagare/interpVelocity_c2p_d.cuh"
+
+#define CHECK_LAST_CUDA_ERROR() checkLast(__FILE__, __LINE__)
+void checkLast(const char* const file, const int line)
+{
+    cudaError_t err{cudaGetLastError()};
+    if (err != cudaSuccess)
+    {
+        std::cerr << "CUDA Runtime Error at: " << file << ":" << line
+                  << std::endl;
+        std::cerr << cudaGetErrorString(err) << std::endl;
+        // We don't exit when we encounter CUDA errors in this example.
+        std::exit(EXIT_FAILURE);
+    }
+}
 
 int main(void) {
     clock_t start = clock();
@@ -60,6 +80,9 @@ int main(void) {
     matrix mat_ns = matrix();
     mat_ns.initMatrix(msh);
 
+    AMGX_SAFE_CALL(AMGX_initialize());
+
+
     cout << "Read Boundary Conditions \n";
     readAndSetBcondConfig(msh.bconds);
 
@@ -68,61 +91,62 @@ int main(void) {
     setInitial(cfg , msh , v);
 
     updateVariablesForNextLoop(cfg , msh , v , mat_poi);
-    v.copyVariables_cell_plane_H2D();
+    v.copyVariables_cell_plane_H2D_all();
+    CHECK_LAST_CUDA_ERROR();
 
+    cout << "Set mesh map \n";
     // prepare for cuda
     cudaConfig cuda_cfg = cudaConfig(msh);
     msh.setMeshMap_d();
+    CHECK_LAST_CUDA_ERROR();
 
-    v.setStructualVariables_d( cuda_cfg , msh , v);
+    cout << "Set structual variables \n";
+    v.setStructualVariables_d(cuda_cfg , msh );
+    CHECK_LAST_CUDA_ERROR();
 
-    cout << "before Tp0=" << v.p["T"][0] << endl;
-    cout << "before Tc0=" << v.c["T"][0] << endl;
-    cout << "before Tc2=" << v.c["T"][2] << endl;
-    cout << "before sx0=" << v.p["sx"][0] << endl;
-    cout << "before sy0=" << v.p["sy"][0] << endl;
-    cout << "before sz0=" << v.p["sz"][0] << endl;
-
-
-    v.copyVariables_cell_plane_D2H();
-
-    cout << "Tp0=" << v.p["T"][0] << endl;
-    cout << "Tc0=" << v.c["T"][0] << endl;
-    cout << "Tc2=" << v.c["T"][2] << endl;
-    cout << "sx0=" << v.p["sx"][0] << endl;
-    cout << "sy0=" << v.p["sy"][0] << endl;
-    cout << "sz0=" << v.p["sz"][0] << endl;
+    setStructualVariables(cfg , msh , v);
+    CHECK_LAST_CUDA_ERROR();
 
     cout << "Start Calculation \n";
     for (int iStep = 0 ; iStep <cfg.nStep ; iStep++) {
 
-//        cout << " Step =" << iStep << "\n";
-//        setBcondsValue(cfg , cuda_cfg , msh , v , mat_poi);
-//temp
-//temp        calcGradient(cfg , msh , v);
-//temp
-//temp        solveNavierStokes(cfg , msh , v , mat_ns);
-//temp
-//temp        setMatrixPoisson(cfg , msh , v , mat_poi);
-//temp
-//temp        if (cfg.gpu == 0) {
-//temp            solvePoisson(cfg , msh , v , mat_poi);
-//temp        } else if (cfg.gpu == 1) {
-//temp            callAmgclCuda(cfg, msh, v, mat_poi );
-//temp        } else {
-//temp            cerr << "unknown gpu option : " << cfg.gpu << endl;
-//temp            return 1;//tem
-//temp        }
-//temp
-//temp        correctPresVel(cfg , msh , v);
-//temp
-//temp        // *** output hdf5 ***
-//temp        outputH5_XDMF(cfg , msh, v, iStep);
-//temp
-//temp        // *** update TN, diffT, etc.***
-//temp        updateVariablesForNextLoop(cfg , msh , v , mat_poi);
-//temp
-//temp        calcCFL(cfg , msh , v);
+        cout << " Step =" << iStep << "\n";
+        setBcondsValue(cfg , cuda_cfg , msh , v , mat_poi);
+
+        if      (cfg.gpu == 0) { calcGradient(cfg , msh , v ); } 
+        else if (cfg.gpu == 1) { calcGradient_d_wrapper(cfg , cuda_cfg , msh , v ); }
+
+        if      (cfg.gpu == 0) { 
+            solveNavierStokes(cfg , msh, v , mat_ns);
+
+        } else if (cfg.gpu == 1) { 
+            // solve navier stokes 
+            calcConvDiff_d_wrapper(cfg , cuda_cfg , msh , v , mat_ns);
+            updateCenterVelocity_d_wrapper(cfg , cuda_cfg , msh , v , mat_ns);
+            // rhi-chow interpolation
+            interpVelocity_c2p_d_wrapper(cfg , cuda_cfg , msh , v , mat_ns);
+        }
+
+        if (cfg.gpu == 1) v.copyVariables_cell_plane_D2H_all();
+
+        // set Matrix for poisson equation
+        setMatrixPoisson(cfg , msh , v , mat_poi);
+
+        solvePoisson(cfg , msh , v , mat_poi);
+
+        correctPresVel(cfg , msh , v);
+
+        // *** output hdf5 ***
+        outputH5_XDMF(cfg , msh, v, iStep);
+
+        // *** update TN, diffT, etc.***
+        updateVariablesForNextLoop(cfg , msh , v , mat_poi);
+
+        calcCFL(cfg , msh , v);
+
+        if (cfg.gpu == 1 || cfg.gpu == -1) v.copyVariables_cell_plane_H2D_all();
+
+        cudaThreadSynchronize();
     }
 
     clock_t end = clock();
